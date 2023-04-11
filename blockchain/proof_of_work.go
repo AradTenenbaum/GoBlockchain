@@ -3,20 +3,37 @@ package blockchain
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/binary"
 	"fmt"
+	"log"
 	"math"
 	"math/big"
 )
 
-const targetBits = 24
-const maxNonce = math.MaxInt64
+var (
+	maxNonce = math.MaxInt64
+)
 
+const targetBits = 24
+
+// ProofOfWork represents a proof-of-work
 type ProofOfWork struct {
 	block  *Block
 	target *big.Int
 }
 
+// IntToHex converts an int64 to a byte array
+func IntToHex(num int64) []byte {
+	buff := new(bytes.Buffer)
+	err := binary.Write(buff, binary.BigEndian, num)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return buff.Bytes()
+}
+
+// NewProofOfWork builds and returns a ProofOfWork
 func NewProofOfWork(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
@@ -24,12 +41,6 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 	pow := &ProofOfWork{b, target}
 
 	return pow
-}
-
-func IntToHex(n int64) []byte {
-	hexStr := fmt.Sprintf("%x", n)
-	hexBytes, _ := hex.DecodeString(hexStr)
-	return hexBytes
 }
 
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
@@ -47,6 +58,7 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	return data
 }
 
+// Run performs a proof-of-work
 func (pow *ProofOfWork) Run() (int, []byte) {
 	var hashInt big.Int
 	var hash [32]byte
@@ -55,6 +67,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	fmt.Printf("Mining the block containing \"%s\"\n", pow.block.Data)
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
+
 		hash = sha256.Sum256(data)
 		fmt.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
@@ -70,6 +83,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	return nonce, hash[:]
 }
 
+// Validate validates block's PoW
 func (pow *ProofOfWork) Validate() bool {
 	var hashInt big.Int
 
